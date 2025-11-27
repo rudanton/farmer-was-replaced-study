@@ -7,6 +7,15 @@ class Entities:
         water = 1
         id = random.randint(1, 100000)
 
+        def __init__(self):
+            self._age = 0
+
+        def grow(self, amount=1):
+            self._age += amount
+
+        def is_grown(self):
+            return self._age >= self.grow_time
+
         def get_measure(self):
             return None  # 기본값
 

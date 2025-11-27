@@ -17,8 +17,8 @@ class EntityRef:
 
     def __eq__(self, other):
         if isinstance(other, EntityRef):
-            return self._entity == other._entity
-        return self._entity == other
+            return type(self._entity) == type(other._entity)
+        return type(self._entity) == other  # 인스턴스의 클래스 vs 클래스
 
 
 # === Private 영역 (유저 접근 불가) ===
@@ -26,11 +26,28 @@ _direction = {"North": (0, 1), "South": (0, -1), "East": (1, 0), "West": (-1, 0)
 _position = (0, 0)
 _size = 16
 _array = [[Entities.Crop() for _ in range(_size)] for _ in range(_size)]
+_inventory = {Entities.Crop: 0}
+_tick = 0
 
+# === 밸런스 변수 ===
+_tick_speed = 1      # 틱 증가량 (레벨업 시 증가 가능)
+_grow_speed = 1      # 작물 성장 속도 (레벨업 시 증가 가능)
+
+
+def _advance_time():
+    """틱 증가 및 작물 성장 처리"""
+    global _tick
+    _tick += _tick_speed
+    for y in range(_size):
+        for x in range(_size):
+            crop = _array[y][x]
+            if hasattr(crop, 'grow'):
+                crop.grow(_grow_speed)
 
 
 # === 게임 API 함수 ===
 def move(dir):
+    _advance_time()
     global _position
     x = _position[0] + _direction[dir][0]
     y = _position[1] + _direction[dir][1]
@@ -55,13 +72,35 @@ def get_entity():
     return EntityRef(crop)
 
 def plant(entity: Entities.Crop):
+    _advance_time()
     global _position, _array
-    _array[_position[1]][_position[0]] = entity
+    _array[_position[1]][_position[0]] = entity()  # 인스턴스 생성
+
+def harvest():
+    _advance_time()
+    global _position, _array
+    entity = _array[_position[1]][_position[0]]
+    if can_harvest():
+        _inventory[entity] += entity.value
+    _array[_position[1]][_position[0]] = Entities.Grass()
+
+def can_harvest():
+    global _position, _array
+    crop = _array[_position[1]][_position[0]]
+    return hasattr(crop, 'is_grown') and crop.is_grown()
 
 def swap(dir):
+    _advance_time()
     global _position, _array
-    dir_pos = _direction[dir]
-    target = ((dir_pos[0] + _position[0]) % _size, (dir_pos[1] + _position[1]) % _size)
+    target = ((_direction[dir][0] + _position[0]) % _size, (_direction[dir][1] + _position[1]) % _size)
+
+    current = _array[_position[1]][_position[0]]
+    target_entity = _array[target[1]][target[0]]
+
+    # 둘 다 같은 Entity일 때만 swap
+    if  current != Entities.Cactus or current != target_entity :
+        return
+
     _array[_position[1]][_position[0]], _array[target[1]][target[0]] = \
         _array[target[1]][target[0]], _array[_position[1]][_position[0]]
 
@@ -96,6 +135,8 @@ def run_user_code(code):
         'get_pos_y': get_pos_y,
         'get_entity': get_entity,
         'plant': plant,
+        'harvest': harvest,
+        'can_harvest': can_harvest,
         'print_map': print_map,
         'Entities': Entities,
         # 기본 내장 함수
