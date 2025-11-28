@@ -78,11 +78,78 @@ def plant(entity: Entities.Crop):
 
 def harvest():
     _advance_time()
-    global _position, _array
+    global _position, _array, _inventory
     entity = _array[_position[1]][_position[0]]
     if can_harvest():
-        _inventory[entity] += entity.value
-    _array[_position[1]][_position[0]] = Entities.Grass()
+        entity_type = type(entity)
+
+        if entity_type == Entities.Cactus:
+            # 선인장: 정렬 체크 후 재귀 수확
+            count = _harvest_cactus_recursive(_position, set())
+            reward = entity.harvest(neighbors_sorted=True, count=count)
+        else:
+            # 일반 작물
+            reward = entity.harvest()
+            _array[_position[1]][_position[0]] = Entities.Grass()
+
+        if entity_type not in _inventory:
+            _inventory[entity_type] = 0
+        _inventory[entity_type] += reward
+
+
+def _is_cactus_sorted(pos):
+    """해당 위치의 선인장이 정렬 조건을 만족하는지 체크"""
+    x, y = pos
+    crop = _array[y][x]
+
+    if type(crop) != Entities.Cactus or not crop.is_grown():
+        return False
+
+    current_measure = crop.get_measure()
+
+    # 북쪽, 동쪽: 같거나 커야 함
+    for dir_name in ['North', 'East']:
+        nx = (x + _direction[dir_name][0]) % _size
+        ny = (y + _direction[dir_name][1]) % _size
+        neighbor = _array[ny][nx]
+        if type(neighbor) == Entities.Cactus and neighbor.is_grown():
+            if neighbor.get_measure() < current_measure:
+                return False
+
+    # 남쪽, 서쪽: 같거나 작아야 함
+    for dir_name in ['South', 'West']:
+        nx = (x + _direction[dir_name][0]) % _size
+        ny = (y + _direction[dir_name][1]) % _size
+        neighbor = _array[ny][nx]
+        if type(neighbor) == Entities.Cactus and neighbor.is_grown():
+            if neighbor.get_measure() > current_measure:
+                return False
+
+    return True
+
+
+def _harvest_cactus_recursive(pos, visited):
+    """정렬된 선인장을 재귀적으로 수확하고 개수 반환"""
+    x, y = pos
+
+    if pos in visited:
+        return 0
+
+    if not _is_cactus_sorted(pos):
+        return 0
+
+    visited.add(pos)
+    count = 1
+    _array[y][x] = Entities.Grass()
+
+    # 이웃 선인장도 재귀 수확
+    for dir_name in ['North', 'South', 'East', 'West']:
+        nx = (x + _direction[dir_name][0]) % _size
+        ny = (y + _direction[dir_name][1]) % _size
+        count += _harvest_cactus_recursive((nx, ny), visited)
+
+    return count
+
 
 def can_harvest():
     global _position, _array

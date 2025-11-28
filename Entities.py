@@ -19,6 +19,9 @@ class Entities:
         def get_measure(self):
             return None  # 기본값
 
+        def harvest(self):
+            return self.value  # 기본 수확
+
     class Carrot(Crop):
         grow_time = 3
         value = 1
@@ -31,6 +34,10 @@ class Entities:
         def get_measure(self):
             return self.id
 
+        def harvest(self):
+            n = self.size
+            return n * n * min(n, 6)
+
     class Cactus(Crop):
         grow_time = 5
         measure = random.randint(1, 10)
@@ -38,6 +45,12 @@ class Entities:
 
         def get_measure(self):
             return self.measure
+
+        def harvest(self, neighbors_sorted=False, count=1):
+            # 정렬되어 있으면 n² 보상
+            if neighbors_sorted:
+                return count * count
+            return self.value
 
     class Tree(Crop):
         grow_time = 10
