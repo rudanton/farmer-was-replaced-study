@@ -54,7 +54,18 @@ class Entities:
 
     class Tree(Crop):
         grow_time = 10
-        value = 1
+        value = 5  # 목재 5개
+
+        def __init__(self):
+            super().__init__()
+            self._effective_grow_time = self.grow_time
+
+        def set_effective_grow_time(self, adjacent_count):
+            """인접 나무 수에 따른 성장 시간 설정"""
+            self._effective_grow_time = self.grow_time * (2 ** adjacent_count)
+
+        def is_grown(self):
+            return self._age >= self._effective_grow_time
 
     class Flower(Crop):
         grow_time = 1
@@ -63,3 +74,27 @@ class Entities:
 
         def get_measure(self):
             return self.measure
+
+    class Sunflower(Crop):
+        grow_time = 2
+        value = 1
+
+        def __init__(self):
+            super().__init__()
+            self.petals = random.randint(7, 15)  # 꽃잎 수 7~15
+
+        def get_measure(self):
+            return self.petals
+
+        def harvest(self, is_max=False):
+            if is_max:
+                return self.value * 5  # 최댓값이면 5배
+            return self.value
+
+    class Grass(Crop):
+        """빈 땅 표시용"""
+        grow_time = 0
+        value = 0
+
+        def is_grown(self):
+            return False
